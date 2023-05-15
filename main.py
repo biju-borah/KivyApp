@@ -1,15 +1,17 @@
 from turtle import width
+import math
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.label import Label
+import pandas as pd
 
 from bdb import effective
 from tkinter import FLAT
 
-value = {}
+value = {'phi': 0.75, 'lamda': 1}
 
 
 def beta1_value():
@@ -69,7 +71,7 @@ def strength_factor_classification():
     if phi >= 0.90:
         phi, classify = 0.90, 'Under-reinforced'
     elif phi <= 0.65:
-        phi, classify = 0.65, 'Over-reinforced'
+        phi, classify = 0.65, 'Over-reinforced, kindly recheck the value and try again'
     else:
         phi, classify = phi, 'Balanced'
     return phi, classify
@@ -100,11 +102,11 @@ def steel_ratio_check():
         return 'Steel ratio is LESS THAN the minimum limit: ''\u03A1' + 'min={:.4f}'.format(rho)
 
     else:
-        return 'Steel ratio EXCEEDS the maximum limit,Overly-reinforced: ' '\u03A1' + 'max={:.4f}'.format(rho)
+        return 'Steel ratio EXCEEDS the maximum limit, Overly-reinforced: ' '\u03A1' + 'max={:.4f}'.format(rho)
 
 
 def rebar_suggestion():
-    dbar_sizes = [20, 25, 28, 32]
+    dbar_sizes = [16, 20, 25, 28, 32]
     n_list = []
     num_layer_list = []
 
@@ -138,7 +140,6 @@ def rebar_suggestion():
     dict = {'Bottom Bars': dbar_sizes, 'Qty(bottom)': n_list, 'Layer': num_layer_list, 'Top Bars': dbarprime_sizes,
             'Qty(top)': nprime_list}
 
-    import pandas as pd
     df = pd.DataFrame(dict)
     return df
 
@@ -200,8 +201,9 @@ def cal1():
         import time
 
         # time.sleep(1)
-        print(df)
-        return f'\n-----------------------------------\nSuggested Reinforcements:\n----------------------------------\n{df}'
+        print(df[['Bottom Bars', 'Qty(bottom)', 'Classification', 'Steel Ratio']])
+
+        return f"\n-----------------------------------\nSuggested Reinforcements:\n----------------------------------\n{df[['Bottom Bars', 'Qty(bottom)', 'Classification', 'Steel Ratio']]}"
 
 
 def cal2():
@@ -262,7 +264,7 @@ class MyForm(BoxLayout):
 
         # Add submit button
         self.submit_button = Button(
-            text='Submit', size_hint=(None, None), size=(100, 50))
+            text='Submit', size_hint=(1.0, 1.0), size=(100, 50))
         self.submit_button.bind(on_press=self.submit_form)
         self.add_widget(self.submit_button)
 
@@ -285,9 +287,9 @@ class MyForm(BoxLayout):
         # self.remove_widget(self.submit_button)
         self.label = Label(text=text)
         self.label2 = Label(
-            text="\nThis program assumes: Concrete cover = 40mm, Stirrups/Links Diameter = 10mm")
+            text="\nThis program assumes: Concrete cover = 40mm, Stirrups/Links Diameter = 10mm", size_hint=(1.0, 0.2))
         self.continue_btn = Button(
-            text='Continue', size_hint=(None, None), size=(100, 50))
+            text='Continue', size_hint=(1.0, 0.5), size=(100, 50))
         self.continue_btn.bind(on_press=self.submit)
         self.add_widget(self.continue_btn)
         self.add_widget(self.label2)
@@ -326,12 +328,12 @@ class MyForm2(BoxLayout):
 
         # Add submit button
         self.back_btn = Button(
-            text='Back', size_hint=(None, None), size=(100, 50))
+            text='Back', size_hint=(1.0, 1.0), size=(100, 50))
         self.back_btn.bind(on_press=self.back2_btn)
         self.add_widget(self.back_btn)
 
         self.submit_button = Button(
-            text='Submit', size_hint=(None, None), size=(100, 50))
+            text='Submit', size_hint=(1.0, 1.0), size=(100, 50))
         self.submit_button.bind(on_press=self.submit_form)
         self.add_widget(self.submit_button)
 
@@ -347,6 +349,7 @@ class MyForm2(BoxLayout):
         self.add_widget(self.back_btn)
         self.add_widget(self.submit_button)
         self.remove_widget(self.label)
+        self.remove_widget(self.formula)
         self.remove_widget(self.back_button)
         self.remove_widget(self.go_to_first_btn)
 
@@ -374,14 +377,21 @@ class MyForm2(BoxLayout):
         self.remove_widget(self.trt)
         self.remove_widget(self.submit_button)
         self.remove_widget(self.back_btn)
-        self.label = Label(text=text)
+        # φ * 0.17 * λ * √(f` c)*b w*d
+        shear_strength = value['phi'] * 0.17 * value['lamda'] * \
+            math.sqrt(int(value['fc'])) * value['b'] * value['h']
+        self.formula = Label(
+            text=f'Maximum steel ratio for beam = 0.04bD\nMinimum steal ratio for beam = 0.002bD')
+        self.add_widget(self.formula)
+        self.label = Label(
+            text=f'Beam Shear Capacity : {int(shear_strength/1000)} KN/m2\n{text}')
         self.add_widget(self.label)
         self.back_button = Button(
-            text='Back', size_hint=(None, None), size=(100, 50))
+            text='Back', size_hint=(1.0, 0.5), size=(100, 50))
         self.back_button.bind(on_press=self.back)
         self.add_widget(self.back_button)
         self.go_to_first_btn = Button(
-            text='Reset', size_hint=(None, None), size=(100, 50))
+            text='Reset', size_hint=(1.0, 0.5), size=(100, 50))
         self.go_to_first_btn.bind(on_press=self.go_to_first)
         self.add_widget(self.go_to_first_btn)
         screen1 = App.get_running_app().root.get_screen('main')
